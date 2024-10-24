@@ -7,7 +7,7 @@ from sklearn.ensemble import IsolationForest
 import joblib
 
 # Load the dataset
-data = pd.read_csv("../data/plas_tech_gas_data.csv")
+data = pd.read_csv("../data/plas_tech_gas_data.csv")  # Corrected path
 
 # Features and target variable
 features = ['Plastic_Waste_Input_kg', 'Temperature_C', 'Pressure_kPa', 
@@ -35,7 +35,7 @@ print(f"Mean Absolute Error: {mae}")
 print(f"R-squared: {r2}")
 
 # Save the Random Forest model for future predictions
-joblib.dump(rf_model, "../data/gas_output_model.pkl")
+joblib.dump(rf_model, "../data/gas_output_model.pkl")  # Corrected path
 
 # Anomaly Detection using Isolation Forest
 iso_forest = IsolationForest(contamination=0.05, random_state=42)
@@ -46,4 +46,4 @@ anomalies = data[data['Anomaly_Score'] == -1]
 print(f"Number of anomalies detected: {len(anomalies)}")
 
 # Save anomalies to a CSV file
-anomalies.to_csv("../data/anomalies_detected.csv", index=False)
+anomalies.to_csv("../data/anomalies_detected.csv", index=False)  # Corrected path

@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import joblib
 
 # Load the dataset
-data = pd.read_csv("../data/plas_tech_gas_data.csv")
+data = pd.read_csv("data/plas_tech_gas_data.csv")  # Updated path
 
 # Load the saved Random Forest model
-rf_model = joblib.load("../data/gas_output_model.pkl")
+rf_model = joblib.load("data/gas_output_model.pkl")  # Updated path
 
 # Filter anomalies based on the Anomaly_Flag
 anomalies = data[data['Anomaly_Flag'] == 1]
@@ -19,18 +19,18 @@ st.markdown('<p class="title-font">🌟 Gas Output Prediction Dashboard</p>', un
 st.markdown("### Monitor gas output, anomalies, and predict gas output with enhanced visuals!")
 
 # Display key metrics with improved layout
-st.write("""
+st.write(f"""
     <div class="metrics-container">
         <div class="metric-box">
             <h4>Total Data Records</h4>
-            <p class="big-num">{}</p>
+            <p class="big-num">{len(data)}</p>
         </div>
         <div class="metric-box">
             <h4>Total Anomalies Detected</h4>
-            <p class="big-num">{}</p>
+            <p class="big-num">{len(anomalies)}</p>
         </div>
     </div>
-    """.format(len(data), len(anomalies)), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # Add a section for Gas Output Prediction
 st.markdown('<p class="section-title">🔮 Predict Gas Output</p>', unsafe_allow_html=True)
