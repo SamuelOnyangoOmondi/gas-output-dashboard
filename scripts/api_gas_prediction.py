@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pandas as pd
 import joblib
 
 # Initialize the Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Load the pre-trained Random Forest model
 model = joblib.load('../data/gas_output_model.pkl')
@@ -20,6 +22,7 @@ def predict_gas_output():
         temperature = data.get('Temperature_C', None)
         pressure = data.get('Pressure_kPa', None)
 
+        # Check for missing inputs
         if plastic_waste is None or temperature is None or pressure is None:
             return jsonify({'error': 'Missing input data'}), 400
 
@@ -49,4 +52,4 @@ def predict_gas_output():
 
 # Run the app (for local testing)
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)
