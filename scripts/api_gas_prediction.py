@@ -6,7 +6,9 @@ import joblib
 app = Flask(__name__)
 
 # Load the pre-trained Random Forest model
-model = joblib.load('../data/gas_output_model.pkl')
+import os
+model_path = os.path.join(os.path.dirname(__file__), '../data/gas_output_model.pkl')
+model = joblib.load(model_path)
 
 # Define a route for the prediction
 @app.route('/predict', methods=['POST'])
