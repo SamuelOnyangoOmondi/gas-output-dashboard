@@ -2,35 +2,34 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 import joblib
-import os
 
-# Initialize Flask app and enable CORS
+# Initialize the Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Determine the absolute paths based on your current structure
-current_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(current_dir, '../data/gas_output_model.pkl')
-anomaly_model_path = os.path.join(current_dir, '../data/anomalies_detected.csv')
+# Load the pre-trained Random Forest model and anomaly detection model
+model = joblib.load('../data/gas_output_model.pkl')
+iso_forest = joblib.load('../data/anomaly_detection_model.pkl')
 
-# Load the prediction model
-model = joblib.load(model_path)
+# Define custom thresholds for detecting anomalies
+PLASTIC_WASTE_LOWER = 50      # Minimum plastic waste input (kg)
+PLASTIC_WASTE_UPPER = 500     # Maximum plastic waste input (kg)
+TEMPERATURE_LOWER = 100       # Minimum temperature (Celsius)
+TEMPERATURE_UPPER = 400       # Maximum temperature (Celsius)
+PRESSURE_LOWER = 50           # Minimum pressure (kPa)
+PRESSURE_UPPER = 300          # Maximum pressure (kPa)
 
-# Load the anomaly detection model (if it's a pre-trained model, otherwise use CSV)
-try:
-    anomaly_detector = pd.read_csv(anomaly_model_path)
-except FileNotFoundError:
-    anomaly_detector = None
-
+# Define a route for the prediction
 @app.route('/predict', methods=['POST'])
 def predict_gas_output():
     try:
+        # Get the data from the request (JSON format)
         data = request.get_json()
-
-        # Extract input data
-        plastic_waste = data.get('Plastic_Waste_Input_kg')
-        temperature = data.get('Temperature_C')
-        pressure = data.get('Pressure_kPa')
+        
+        # Extract the necessary fields from the request data
+        plastic_waste = data.get('Plastic_Waste_Input_kg', None)
+        temperature = data.get('Temperature_C', None)
+        pressure = data.get('Pressure_kPa', None)
 
         if plastic_waste is None or temperature is None or pressure is None:
             return jsonify({'error': 'Missing input data'}), 400
@@ -40,7 +39,7 @@ def predict_gas_output():
         pressure_temp_ratio = pressure / temperature
         waste_pressure_interaction = plastic_waste * pressure
 
-        # Prepare input data for prediction
+        # Prepare the input data for prediction
         input_data = pd.DataFrame({
             'Plastic_Waste_Input_kg': [plastic_waste],
             'Temperature_C': [temperature],
@@ -50,31 +49,36 @@ def predict_gas_output():
             'Waste_Pressure_Interaction': [waste_pressure_interaction]
         })
 
-        # Make gas output prediction
+        # Make the prediction
         predicted_gas_output = model.predict(input_data)[0]
 
-        # Check for anomalies if anomaly detector is available
-        if anomaly_detector is not None:
-            is_anomaly = detect_anomaly(input_data)
-        else:
-            is_anomaly = False
+        # Run anomaly detection using the Isolation Forest model
+        anomaly_flag = iso_forest.predict(input_data)[0]
 
+        # Apply custom rules for detecting anomalies
+        custom_anomaly = False
+        if not (PLASTIC_WASTE_LOWER <= plastic_waste <= PLASTIC_WASTE_UPPER):
+            custom_anomaly = True
+        if not (TEMPERATURE_LOWER <= temperature <= TEMPERATURE_UPPER):
+            custom_anomaly = True
+        if not (PRESSURE_LOWER <= pressure <= PRESSURE_UPPER):
+            custom_anomaly = True
+
+        # Combine the results from the model and custom rules
+        if anomaly_flag == -1 or custom_anomaly:
+            anomaly_status = "Yes"
+        else:
+            anomaly_status = "No"
+
+        # Return the prediction and anomaly status
         return jsonify({
             'Predicted_Gas_Output_Liters': predicted_gas_output,
-            'Anomaly_Flag': is_anomaly
+            'Anomaly_Flag': anomaly_status
         })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def detect_anomaly(input_data):
-    """ Simple anomaly detection based on predefined CSV thresholds """
-    anomalies = anomaly_detector[
-        (anomaly_detector['Plastic_Waste_Input_kg'] == input_data['Plastic_Waste_Input_kg'][0]) &
-        (anomaly_detector['Temperature_C'] == input_data['Temperature_C'][0]) &
-        (anomaly_detector['Pressure_kPa'] == input_data['Pressure_kPa'][0])
-    ]
-    return len(anomalies) > 0
-
+# Run the app (for local testing)
 if __name__ == '__main__':
     app.run(debug=True, port=8080)
