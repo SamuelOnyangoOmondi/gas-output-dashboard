@@ -8,9 +8,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Load the pre-trained Random Forest model
-import os
-model_path = os.path.join(os.path.dirname(__file__), '../data/gas_output_model.pkl')
-model = joblib.load(model_path)
+model = joblib.load('../data/gas_output_model.pkl')
 
 # Define a route for the prediction
 @app.route('/predict', methods=['POST'])
