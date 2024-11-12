@@ -1,1 +1,1 @@
-web: python scripts/api_gas_prediction.py
+web: gunicorn scripts.api_gas_prediction:app
