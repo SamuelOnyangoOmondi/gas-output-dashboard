@@ -1,4 +1,5 @@
 # Import necessary libraries
+import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
@@ -6,8 +7,14 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.ensemble import IsolationForest
 import joblib
 
+# Dynamically set the correct paths based on the script's directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+data_file_path = os.path.join(BASE_DIR, "../data/plas_tech_gas_data.csv")
+model_file_path = os.path.join(BASE_DIR, "../data/gas_output_model.pkl")
+anomalies_file_path = os.path.join(BASE_DIR, "../data/anomalies_detected.csv")
+
 # Load the dataset
-data = pd.read_csv("../data/plas_tech_gas_data.csv")  # Corrected path
+data = pd.read_csv(data_file_path)
 
 # Features and target variable
 features = ['Plastic_Waste_Input_kg', 'Temperature_C', 'Pressure_kPa', 
@@ -35,7 +42,7 @@ print(f"Mean Absolute Error: {mae}")
 print(f"R-squared: {r2}")
 
 # Save the Random Forest model for future predictions
-joblib.dump(rf_model, "../data/gas_output_model.pkl")  # Corrected path
+joblib.dump(rf_model, model_file_path)
 
 # Anomaly Detection using Isolation Forest
 iso_forest = IsolationForest(contamination=0.05, random_state=42)
@@ -46,4 +53,4 @@ anomalies = data[data['Anomaly_Score'] == -1]
 print(f"Number of anomalies detected: {len(anomalies)}")
 
 # Save anomalies to a CSV file
-anomalies.to_csv("../data/anomalies_detected.csv", index=False)  # Corrected path
+anomalies.to_csv(anomalies_file_path, index=False)
