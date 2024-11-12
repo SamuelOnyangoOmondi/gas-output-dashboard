@@ -2,14 +2,24 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 import joblib
+import os
 
 # Initialize the Flask app
 app = Flask(__name__)
 CORS(app)
 
-# Load the pre-trained Random Forest model and anomaly detection model
-model = joblib.load('../data/gas_output_model.pkl')
-iso_forest = joblib.load('../data/anomaly_detection_model.pkl')
+# Dynamically set the base directory for absolute paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load the pre-trained Random Forest model
+model_path = os.path.join(BASE_DIR, '../data/gas_output_model.pkl')
+
+# Load the model with error handling
+try:
+    model = joblib.load(model_path)
+except FileNotFoundError as e:
+    print(f"Error loading model: {e}")
+    model = None
 
 # Define custom thresholds for detecting anomalies
 PLASTIC_WASTE_LOWER = 50      # Minimum plastic waste input (kg)
@@ -22,15 +32,20 @@ PRESSURE_UPPER = 300          # Maximum pressure (kPa)
 # Define a route for the prediction
 @app.route('/predict', methods=['POST'])
 def predict_gas_output():
+    # Check if the model is loaded
+    if model is None:
+        return jsonify({'error': 'Model file not found. Please check deployment.'}), 500
+
     try:
         # Get the data from the request (JSON format)
         data = request.get_json()
         
         # Extract the necessary fields from the request data
-        plastic_waste = data.get('Plastic_Waste_Input_kg', None)
-        temperature = data.get('Temperature_C', None)
-        pressure = data.get('Pressure_kPa', None)
+        plastic_waste = data.get('Plastic_Waste_Input_kg')
+        temperature = data.get('Temperature_C')
+        pressure = data.get('Pressure_kPa')
 
+        # Validate input fields
         if plastic_waste is None or temperature is None or pressure is None:
             return jsonify({'error': 'Missing input data'}), 400
 
@@ -52,9 +67,6 @@ def predict_gas_output():
         # Make the prediction
         predicted_gas_output = model.predict(input_data)[0]
 
-        # Run anomaly detection using the Isolation Forest model
-        anomaly_flag = iso_forest.predict(input_data)[0]
-
         # Apply custom rules for detecting anomalies
         custom_anomaly = False
         if not (PLASTIC_WASTE_LOWER <= plastic_waste <= PLASTIC_WASTE_UPPER):
@@ -64,11 +76,8 @@ def predict_gas_output():
         if not (PRESSURE_LOWER <= pressure <= PRESSURE_UPPER):
             custom_anomaly = True
 
-        # Combine the results from the model and custom rules
-        if anomaly_flag == -1 or custom_anomaly:
-            anomaly_status = "Yes"
-        else:
-            anomaly_status = "No"
+        # Determine the anomaly status
+        anomaly_status = "Yes" if custom_anomaly else "No"
 
         # Return the prediction and anomaly status
         return jsonify({
